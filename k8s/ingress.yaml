@@ -1,0 +1,30 @@
+# -----------------------------------------------------------------------------
+# Kubernetes Ingress for the Market Quote API
+#
+# Goal:
+# - Expose the internal Service through an Ingress controller.
+# - Keep the application Service private inside the cluster.
+# -----------------------------------------------------------------------------
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+
+metadata:
+  name: market-quote-ingress
+  namespace: market-quote
+
+spec:
+  ingressClassName: nginx
+  rules:
+    # Host intentionally omitted so the demo works directly through the ingress
+    # public IP. Add a host and TLS block here when fronting the app with a real
+    # domain.
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: market-quote-service
+                port:
+                  number: 80

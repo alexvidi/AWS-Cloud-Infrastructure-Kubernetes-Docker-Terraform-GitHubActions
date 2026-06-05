@@ -1,0 +1,12 @@
+# -----------------------------------------------------------------------------
+# Docker build context exclusions for the Market Quote API
+# -----------------------------------------------------------------------------
+.venv
+__pycache__/
+*.pyc
+.git
+.github
+tests
+docs
+infra
+k8s

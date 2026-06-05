@@ -1,0 +1,300 @@
+# -----------------------------------------------------------------------------
+# Grafana datasource and dashboard provisioning
+# -----------------------------------------------------------------------------
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: monitoring
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        uid: prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus-server.monitoring.svc.cluster.local:9090
+        isDefault: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-provider
+  namespace: monitoring
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: market-quote-api
+        orgId: 1
+        folder: Market Quote API
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-market-quote
+  namespace: monitoring
+data:
+  market-quote-api-metrics.json: |
+    {
+      "title": "Market Quote API - Metrics",
+      "schemaVersion": 37,
+      "version": 1,
+      "refresh": "30s",
+      "tags": ["fastapi", "prometheus", "market-quote"],
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Request rate (rps)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(http_requests_total[5m]))",
+              "legendFormat": "rps",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "decimals": 3,
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "blue", "value": null },
+                  { "color": "green", "value": 0.01 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 4, "x": 0, "y": 0 }
+        },
+        {
+          "type": "stat",
+          "title": "Total requests",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "expr": "sum(http_requests_total)",
+              "legendFormat": "requests",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "decimals": 0,
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "blue", "value": null },
+                  { "color": "green", "value": 1 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 4, "x": 4, "y": 0 }
+        },
+        {
+          "type": "stat",
+          "title": "HTTP 5xx rate (5m)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) or vector(0)",
+              "legendFormat": "5xx rps",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "decimals": 3,
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 0.05 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 4, "x": 8, "y": 0 }
+        },
+        {
+          "type": "stat",
+          "title": "HTTP 4xx rate (5m)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(http_requests_total{status=~\"4..\"}[5m]))",
+              "legendFormat": "4xx rps",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "decimals": 3,
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "orange", "value": 0.01 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 4, "x": 12, "y": 0 }
+        },
+        {
+          "type": "stat",
+          "title": "Targets up",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "expr": "sum(up)",
+              "legendFormat": "up",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "decimals": 0,
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red", "value": null },
+                  { "color": "green", "value": 1 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 6, "w": 4, "x": 16, "y": 0 }
+        },
+        {
+          "type": "timeseries",
+          "title": "HTTP latency p95 (ms)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "expr": "1000 * histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "p95",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ms",
+              "decimals": 0,
+              "color": { "mode": "palette-classic" }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom" },
+            "tooltip": { "mode": "single" }
+          },
+          "gridPos": { "h": 8, "w": 10, "x": 0, "y": 6 }
+        },
+        {
+          "type": "timeseries",
+          "title": "Request volume by status",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(http_requests_total[5m])) by (status)",
+              "legendFormat": "{{status}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "decimals": 3,
+              "color": { "mode": "palette-classic" }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom" },
+            "tooltip": { "mode": "single" }
+          },
+          "gridPos": { "h": 8, "w": 10, "x": 10, "y": 6 }
+        }
+      ]
+    }

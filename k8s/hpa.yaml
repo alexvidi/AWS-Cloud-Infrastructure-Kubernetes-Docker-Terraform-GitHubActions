@@ -1,0 +1,43 @@
+# -----------------------------------------------------------------------------
+# HorizontalPodAutoscaler for the Market Quote API
+#
+# Goal:
+# - Automatically scale the number of pods based on CPU utilization.
+# - Keep performance stable under load while optimizing resource usage.
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# HPA RESOURCE DEFINITION
+# -----------------------------------------------------------------------------
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+
+# -----------------------------------------------------------------------------
+# METADATA
+# -----------------------------------------------------------------------------
+metadata:
+  name: market-quote-hpa
+  namespace: market-quote
+
+# -----------------------------------------------------------------------------
+# SCALING SPECIFICATION
+# -----------------------------------------------------------------------------
+spec:
+  # Target workload that this HPA will scale.
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: market-quote-api
+
+  # Minimum and maximum number of pod replicas allowed.
+  minReplicas: 2
+  maxReplicas: 5
+
+  # Scale based on average CPU utilization across pods.
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60

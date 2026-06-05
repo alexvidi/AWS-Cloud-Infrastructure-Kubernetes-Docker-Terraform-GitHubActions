@@ -1,0 +1,137 @@
+# -----------------------------------------------------------------------------
+# GitHub Actions Workflow: Infrastructure & Manifest Validation
+#
+# Goal:
+# - Execute application quality gates (lint, tests, SAST, dependency audit).
+# - Execute Terraform quality gates (fmt + validate) for IaC stability.
+# - Execute IaC security scan with Checkov.
+# - Perform schema validation on Kubernetes manifests using Kubeconform.
+#
+# When it runs:
+# - Manual trigger (workflow_dispatch).
+# - On Pull Requests touching app, infrastructure, K8s, or workflow paths.
+# - On pushes to master affecting the same scopes.
+# -----------------------------------------------------------------------------
+
+name: Validate
+
+# -----------------------------------------------------------------------------
+# TRIGGERS
+# -----------------------------------------------------------------------------
+on:
+  workflow_dispatch:  
+
+  pull_request:
+    paths:
+      - "app/**"
+      - "infra/**"
+      - "k8s/**"
+      - ".github/workflows/**"
+  
+  push:
+    branches: ["master"]
+    paths:
+      - "app/**"
+      - "infra/**"
+      - "k8s/**"
+      - ".github/workflows/**"
+
+jobs:
+  # -----------------------------------------------------------------------------
+  # JOB 1: APPLICATION QUALITY & SECURITY
+  # -----------------------------------------------------------------------------
+  app-quality:
+    name: App Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r app/requirements-dev.txt
+
+      - name: Lint (ruff)
+        run: ruff check app
+
+      - name: Tests (pytest)
+        run: pytest app/tests
+
+      - name: SAST (bandit)
+        run: bandit -r app -x app/tests
+
+      - name: Dependency audit (pip-audit)
+        run: pip-audit -r app/requirements.txt
+
+  # -----------------------------------------------------------------------------
+  # JOB 2: TERRAFORM VALIDATION
+  # -----------------------------------------------------------------------------
+  terraform:
+    name: Terraform Static Analysis
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+      
+      - name: Terraform Init & Validate
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+  # -----------------------------------------------------------------------------
+  # JOB 3: IAC SECURITY (CHECKOV)
+  # -----------------------------------------------------------------------------
+  checkov:
+    name: IaC Security (Checkov)
+    runs-on: ubuntu-latest
+    needs: terraform
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Checkov
+        run: python -m pip install --upgrade pip && python -m pip install checkov
+
+      - name: Run Checkov on infra/
+        run: checkov -d infra
+
+  # -----------------------------------------------------------------------------
+  # JOB 4: KUBERNETES MANIFEST QUALITY GATES
+  # -----------------------------------------------------------------------------
+  kubernetes-validation:
+    name: K8s Schema Validation
+    runs-on: ubuntu-latest
+    env:
+      KUBECONFORM_VERSION: "v0.6.4" # Centralized version for easier updates
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Professional way to install binaries when no official action exists
+      - name: Install Kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/download/${{ env.KUBECONFORM_VERSION }}/kubeconform-linux-amd64.tar.gz | tar -xz kubeconform
+          sudo mv kubeconform /usr/local/bin/
+          kubeconform -v
+
+      # Validate raw manifests in /k8s folder
+      - name: Validate Static Manifests
+        run: |
+          kubeconform -strict -summary k8s/

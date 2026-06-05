@@ -1,0 +1,46 @@
+# -----------------------
+# Python
+# -----------------------
+__pycache__/
+*.py[cod]
+
+# Local virtual environments
+.env
+.venv
+.venv-wsl/
+venv/
+env/
+
+# -----------------------
+# Editor / OS files
+# -----------------------
+.vscode/
+.DS_Store
+Thumbs.db
+
+# -----------------------
+# Terraform
+# -----------------------
+# Local Terraform working directory
+.terraform/
+
+# Terraform state files
+*.tfstate
+*.tfstate.*
+
+# Terraform plan files
+*.tfplan
+
+# Terraform crash logs
+crash.log
+crash.*.log
+
+# Terraform plan output
+infra/tfplan
+
+# Terraform variable values (may contain sensitive IDs)
+*.tfvars
+
+# Temporary local auth/bootstrap files
+github-oidc-credential.json
+

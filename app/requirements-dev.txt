@@ -1,0 +1,9 @@
+# Development and test dependencies for local validation and CI.
+-r requirements.txt
+
+# Test and validation tooling pinned for reproducible local runs and CI.
+pytest==9.0.2
+httpx==0.28.1
+ruff==0.15.12
+bandit==1.9.4
+pip-audit==2.10.0

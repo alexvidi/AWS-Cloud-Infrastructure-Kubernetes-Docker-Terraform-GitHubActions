@@ -1,0 +1,20 @@
+# -----------------------------------------------------------------------------
+# PodDisruptionBudget for the Market Quote API
+#
+# Goal:
+# - Avoid all replicas being evicted simultaneously during voluntary disruptions
+#   (node drain, upgrades).
+# -----------------------------------------------------------------------------
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+
+metadata:
+  name: market-quote-pdb
+  namespace: market-quote
+
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: market-quote-api

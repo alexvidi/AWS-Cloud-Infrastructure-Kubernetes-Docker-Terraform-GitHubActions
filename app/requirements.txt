@@ -1,0 +1,12 @@
+# -----------------------------------------------------------------------------
+# Python dependencies for the Market Quote API
+# -----------------------------------------------------------------------------
+# FastAPI is the web framework used to define the HTTP API (endpoints).
+fastapi==0.135.1
+
+# Uvicorn is the ASGI server that runs the FastAPI application.
+# It listens for HTTP requests and forwards them to FastAPI.
+uvicorn==0.27.0
+
+# Prometheus instrumentation for FastAPI (/metrics endpoint).
+prometheus-fastapi-instrumentator==6.1.0

@@ -1,0 +1,20 @@
+# -----------------------------------------------------------------------------
+# Namespace for Market Quote API workloads
+#
+# Goal:
+# - Group all resources under a dedicated namespace.
+# - Enforce Pod Security Admission (restricted profile).
+# -----------------------------------------------------------------------------
+
+apiVersion: v1
+kind: Namespace
+
+metadata:
+  name: market-quote
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: "v1.29"
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: "v1.29"
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: "v1.29"

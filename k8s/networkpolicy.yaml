@@ -1,0 +1,51 @@
+# -----------------------------------------------------------------------------
+# NetworkPolicy for the Market Quote API
+#
+# Goal:
+# - Allow ingress traffic only from the ingress controller and monitoring namespaces.
+# - Deny all egress because the current API does not need outbound network access.
+# -----------------------------------------------------------------------------
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+metadata:
+  name: market-quote-netpol
+  namespace: market-quote
+
+spec:
+  podSelector:
+    matchLabels:
+      app: market-quote-api
+
+  # -----------------------------------------------------------------------------
+  # INGRESS RULES
+  # -----------------------------------------------------------------------------
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    # Allow HTTP traffic from the ingress controller namespace.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+
+    # Allow Prometheus in the monitoring namespace to scrape /metrics.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8000
+
+  # -----------------------------------------------------------------------------
+  # EGRESS RULES
+  # -----------------------------------------------------------------------------
+  # No egress rules: all outbound traffic is denied for selected pods.
+  egress: []

@@ -1,0 +1,31 @@
+# -----------------------------------------------------------------------------
+# Kubernetes Service for the Market Quote API
+# -----------------------------------------------------------------------------
+# Exposes the Pods internally inside the cluster.
+# External HTTP entry is handled by an Ingress resource.
+# -----------------------------------------------------------------------------
+
+apiVersion: v1
+kind: Service
+
+metadata:
+  # Name of the Service in the cluster.
+  name: market-quote-service
+  namespace: market-quote
+
+spec:
+  # "ClusterIP" keeps the Service internal to the cluster network.
+  type: ClusterIP
+
+  # The Service sends traffic only to Pods with this label.
+  selector:
+    app: market-quote-api
+
+  ports:
+    - protocol: TCP
+
+      # Internal Service port used by the Ingress.
+      port: 80
+
+      # Internal container port (must match containerPort in the Deployment).
+      targetPort: 8000

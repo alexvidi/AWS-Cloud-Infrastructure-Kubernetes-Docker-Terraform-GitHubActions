@@ -1,0 +1,8 @@
+# -----------------------------------------------------------------------------
+# Namespace for observability workloads
+# -----------------------------------------------------------------------------
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring

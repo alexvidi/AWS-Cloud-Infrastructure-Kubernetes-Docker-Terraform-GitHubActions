@@ -1,0 +1,13 @@
+# -----------------------------------------------------------------------------
+# Example variable values. Copy to terraform.tfvars and adjust.
+# terraform.tfvars is gitignored because it is environment-specific.
+# -----------------------------------------------------------------------------
+
+region            = "us-east-1"
+github_repository = "alexvidi/aws-cloud-infrastructure-kubernetes-docker-terraform"
+
+# Optional: lock the EKS public API endpoint to your IP.
+# cluster_public_access_cidrs = ["203.0.113.10/32"]
+
+# Optional: set to false if the GitHub OIDC provider already exists in the account.
+# create_github_oidc_provider = false

@@ -1,0 +1,65 @@
+# -----------------------------------------------------------------------------
+# Prometheus scrape configuration for the Market Quote API
+# -----------------------------------------------------------------------------
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+                - alertmanager.monitoring.svc.cluster.local:9093
+
+    rule_files:
+      - /etc/prometheus/alerts.yml
+
+    scrape_configs:
+      - job_name: prometheus
+        static_configs:
+          - targets:
+              - localhost:9090
+
+      - job_name: market-quote-api
+        metrics_path: /metrics
+        static_configs:
+          - targets:
+              - market-quote-service.market-quote.svc.cluster.local:80
+  alerts.yml: |
+    groups:
+      - name: market-quote-api.rules
+        rules:
+          - alert: MarketQuoteApiDown
+            expr: up{job="market-quote-api"} == 0
+            for: 2m
+            labels:
+              severity: critical
+              service: market-quote-api
+            annotations:
+              summary: Market Quote API target is down
+              description: Prometheus has not been able to scrape the Market Quote API for more than 2 minutes.
+
+          - alert: MarketQuoteApiHighServerErrorRate
+            expr: |
+              (
+                sum(rate(http_requests_total{job="market-quote-api",status=~"5..|5xx"}[5m]))
+                /
+                sum(rate(http_requests_total{job="market-quote-api"}[5m]))
+              ) > 0.05
+              and
+              sum(rate(http_requests_total{job="market-quote-api"}[5m])) > 0
+            for: 5m
+            labels:
+              severity: warning
+              service: market-quote-api
+            annotations:
+              summary: Market Quote API has a high 5xx error rate
+              description: More than 5% of Market Quote API HTTP requests have returned 5xx responses for 5 minutes.

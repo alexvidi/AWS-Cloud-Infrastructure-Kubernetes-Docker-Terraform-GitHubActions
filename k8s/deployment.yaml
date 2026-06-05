@@ -1,0 +1,84 @@
+# -----------------------------------------------------------------------------
+# Kubernetes Deployment for the Market Quote API
+# -----------------------------------------------------------------------------
+# Ensures that a Pod with our Docker image is always running.
+# -----------------------------------------------------------------------------
+
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  # Name of the Deployment in the cluster.
+  name: market-quote-api
+  namespace: market-quote
+
+spec:
+  # Number of replicas (Pods) to run.
+  replicas: 2
+
+  # The Deployment manages Pods that match this label selector.
+  selector:
+    matchLabels:
+      app: market-quote-api
+
+  # Pod template: defines how the Pods should look.
+  template:
+    metadata:
+      # Labels that will be attached to the Pods.
+      # The Service will use the same label to route traffic.
+      labels:
+        app: market-quote-api
+
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
+      containers:
+        - name: market-quote-container
+
+          # Docker image stored in Amazon ECR.
+          # This is a placeholder for direct kubectl-based deployments: replace
+          # <account-id> and the region, and push a :v1 tag to that repository.
+          # The GitHub Actions deploy workflow overrides it with the validated commit SHA.
+          image: <account-id>.dkr.ecr.us-east-1.amazonaws.com/market-quote-api:v1
+
+          # Internal port exposed by the container (Uvicorn listens here).
+          ports:
+            - containerPort: 8000
+          
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          # Basic resource configuration 
+          resources:
+            requests:
+              cpu: 100m      # 0.1 CPU core requested
+              memory: 128Mi  # 128 MiB RAM requested
+            limits:
+              cpu: 500m      # Max 0.5 CPU core
+              memory: 512Mi  # Max 512 MiB RAM
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL

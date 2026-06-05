@@ -36,7 +36,7 @@ crash.log
 crash.*.log
 
 # Terraform plan output
-infra/tfplan
+infra/tfplan*
 
 # Terraform variable values (may contain sensitive IDs)
 *.tfvars

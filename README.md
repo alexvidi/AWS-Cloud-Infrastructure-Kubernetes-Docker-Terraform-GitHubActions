@@ -37,6 +37,10 @@ The project is deliberately scoped to stay coherent. Features that were not just
 
 ## Architecture
 
+### High-Level Architecture
+
+![Project flow overview](docs/project-flow-overview.svg)
+
 ### Runtime Request Flow
 
 ```text
@@ -96,7 +100,7 @@ Deploy workflow
   The application `NetworkPolicy` allows ingress only from the `ingress-nginx` and `monitoring` namespaces on the application port, and denies all egress because the current API does not require outbound network access.
 
 - **Availability controls**
-  The project includes an HPA for CPU-based scaling and a PDB to avoid all replicas being voluntarily disrupted at once.
+  The project includes an HPA for CPU-based scaling and a PDB to avoid all replicas being voluntarily disrupted at once. Because EKS does not bundle `metrics-server` (unlike AKS), the deploy installs it as a cluster add-on so the HPA can read pod CPU.
 
 - **No unnecessary platform features**
   GitOps controllers, certificate automation, databases, and tracing were intentionally left out to keep the repository focused and technically consistent.
@@ -108,6 +112,7 @@ app/                FastAPI application and Dockerfile
 infra/              Terraform root and modules (network, registry, eks, github-oidc)
 k8s/                Raw Kubernetes manifests
 .github/workflows/  Validation and deployment pipelines
+docs/               Architecture diagram and project screenshots
 ```
 
 ## Main Components
@@ -149,7 +154,7 @@ Raw manifests live in [k8s/](k8s): namespace, deployment, service, ingress, hpa,
 
 #### Deploy Workflow
 
-[.github/workflows/deploy.yml](.github/workflows/deploy.yml) authenticates to AWS via OIDC, then builds, scans (Trivy), and pushes the image to ECR, ensures `ingress-nginx` exists, applies the manifests to EKS, sets the Deployment image to the validated commit SHA, and runs a post-deploy smoke test against `/health` and `/quote`.
+[.github/workflows/deploy.yml](.github/workflows/deploy.yml) authenticates to AWS via OIDC, then builds, scans (Trivy), and pushes the image to ECR, ensures `ingress-nginx` and `metrics-server` exist, applies the manifests to EKS, sets the Deployment image to the validated commit SHA, and runs a post-deploy smoke test against `/health` and `/quote`. It can also be triggered manually via `workflow_dispatch`.
 
 Required GitHub Secrets:
 
@@ -233,6 +238,8 @@ aws eks update-kubeconfig --region us-east-1 --name alexdevops99-eks
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.15.1/deploy/static/provider/cloud/deploy.yaml
 kubectl rollout status -n ingress-nginx deployment/ingress-nginx-controller --timeout=180s
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.8.1/components.yaml
+kubectl rollout status -n kube-system deployment/metrics-server --timeout=120s
 kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/monitoring-namespace.yaml
 kubectl create secret generic grafana-admin \

@@ -299,9 +299,6 @@ The VPC spans two Availability Zones with public and private subnets and a NAT g
 ![Ingress load balancer](docs/screenshots/infra-ingress-load-balancer.png)
 The internet-facing ELB provisioned by `ingress-nginx` is the public entry point to the application.
 
-![All project resources](docs/screenshots/infra-all-resources-tag-editor.png)
-Every resource Terraform created, grouped by the `Project=alexdevops99` tag in the Resource Groups Tag Editor.
-
 ### Security & Identity (keyless CI/CD)
 
 ![IAM OIDC identity providers](docs/screenshots/iam-oidc-identity-providers.png)
@@ -369,6 +366,9 @@ Alertmanager receives and groups the critical alert under its email receiver.
 
 ![kubectl get nodes](docs/screenshots/k8s-get-nodes.png)
 Two worker nodes `Ready` on EKS 1.31.
+
+![kubectl get all (application)](docs/screenshots/k8s-app-resources.png)
+All application resources in one view: pods, Service, Deployment, ReplicaSets, and the HPA.
 
 ![kubectl top nodes](docs/screenshots/k8s-top-nodes.png)
 Live node CPU/memory usage, served by `metrics-server`.

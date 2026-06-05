@@ -387,5 +387,5 @@ Prometheus, Grafana, and Alertmanager running in the `monitoring` namespace.
 
 **Alexandre Vidal**
 Email: alexvidaldepalol@gmail.com
-[LinkedIn](https://www.linkedin.com/in/alexandre-vidal-de-palol-a18538155/)
+[LinkedIn](https://www.linkedin.com/in/alexvidi/)
 [GitHub](https://github.com/alexvidi)

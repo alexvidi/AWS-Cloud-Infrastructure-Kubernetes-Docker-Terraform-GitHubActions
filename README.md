@@ -67,6 +67,7 @@ Deploy workflow
   -> Trivy image scan
   -> Push image to ECR
   -> Ensure ingress-nginx controller exists
+  -> Ensure metrics-server exists
   -> kubectl apply manifests to EKS
   -> Update Deployment image to commit SHA
   -> Wait for rollout completion
@@ -280,7 +281,7 @@ cd infra
 terraform destroy
 ```
 
-> Delete any load balancers created by `ingress-nginx` first (`kubectl delete -f .../ingress-nginx/.../cloud/deploy.yaml`) so Terraform can remove the VPC cleanly.
+> Delete the `ingress-nginx` Service first (`kubectl delete svc ingress-nginx-controller -n ingress-nginx`) so its AWS load balancer is removed and Terraform can delete the VPC cleanly.
 
 ## Screenshots
 

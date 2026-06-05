@@ -20,8 +20,6 @@ The application itself is intentionally simple. The focus of the repository is t
 
 The project is deliberately scoped to stay coherent. Features that were not justified by the current workload were left out so the repository reflects the technologies that are actually being used.
 
-> This is the AWS counterpart of an equivalent Azure (AKS) project. The application, Kubernetes manifests, and observability stack are shared; the cloud-specific layer (network, registry, managed Kubernetes, identity, CI/CD auth) is rebuilt for AWS.
-
 ## At a Glance
 
 | Area | Implementation |
@@ -86,7 +84,7 @@ Deploy workflow
   The AWS VPC CNI add-on is configured with `enableNetworkPolicy = "true"` so the application `NetworkPolicy` is actually enforced. Without this, EKS would silently ignore NetworkPolicies.
 
 - **ingress-nginx instead of the AWS Load Balancer Controller (for now)**
-  The application is exposed through the `ingress-nginx` controller, which provisions an AWS load balancer for its Service. This keeps the manifests identical to the Azure version and avoids the extra IRSA + controller setup. Moving to the AWS Load Balancer Controller (ALB + IRSA) is a natural next iteration.
+  The application is exposed through the `ingress-nginx` controller, which provisions an AWS load balancer for its Service. This avoids the extra IRSA + controller setup that the AWS Load Balancer Controller requires. Moving to the AWS Load Balancer Controller (ALB + IRSA) is a natural next iteration.
 
 - **Image pulls without IRSA**
   The managed node group's IAM role carries `AmazonEC2ContainerRegistryReadOnly`, so pods pull from ECR without per-pod IAM roles. IRSA is kept available (the cluster OIDC provider exists) for workloads that genuinely need scoped AWS access later.
@@ -101,7 +99,7 @@ Deploy workflow
   The application `NetworkPolicy` allows ingress only from the `ingress-nginx` and `monitoring` namespaces on the application port, and denies all egress because the current API does not require outbound network access.
 
 - **Availability controls**
-  The project includes an HPA for CPU-based scaling and a PDB to avoid all replicas being voluntarily disrupted at once. Because EKS does not bundle `metrics-server` (unlike AKS), the deploy installs it as a cluster add-on so the HPA can read pod CPU.
+  The project includes an HPA for CPU-based scaling and a PDB to avoid all replicas being voluntarily disrupted at once. Because EKS does not bundle `metrics-server`, the deploy installs it as a cluster add-on so the HPA can read pod CPU.
 
 - **No unnecessary platform features**
   GitOps controllers, certificate automation, databases, and tracing were intentionally left out to keep the repository focused and technically consistent.
@@ -141,11 +139,11 @@ Main modules:
 - `eks` — an EKS cluster with a private managed node group, VPC CNI NetworkPolicy enforcement, and control plane logs to CloudWatch (wraps `terraform-aws-modules/eks/aws`).
 - `github-oidc` — the GitHub OIDC provider and a least-privilege IAM role for CI/CD.
 
-The composition happens in [infra/main.tf](infra/main.tf). After the modules, two EKS Access Entry resources grant the GitHub Actions role cluster-admin, which is the AWS equivalent of an Azure RBAC role assignment.
+The composition happens in [infra/main.tf](infra/main.tf). After the modules, two EKS Access Entry resources grant the GitHub Actions role cluster-admin so the CI/CD pipeline can manage workloads.
 
 ### Kubernetes
 
-Raw manifests live in [k8s/](k8s): namespace, deployment, service, ingress, hpa, networkpolicy, pdb, and the monitoring stack (Prometheus, Alertmanager, Grafana). These manifests are shared with the Azure version of the project; only the Deployment image reference differs (ECR instead of ACR).
+Raw manifests live in [k8s/](k8s): namespace, deployment, service, ingress, hpa, networkpolicy, pdb, and the monitoring stack (Prometheus, Alertmanager, Grafana). The Deployment image points to the project's ECR repository.
 
 ### CI/CD
 

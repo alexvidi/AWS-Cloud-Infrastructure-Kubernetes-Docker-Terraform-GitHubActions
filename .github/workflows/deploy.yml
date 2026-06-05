@@ -208,8 +208,8 @@ jobs:
           kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.15.1/deploy/static/provider/cloud/deploy.yaml
           kubectl rollout status -n ingress-nginx deployment/ingress-nginx-controller --timeout=180s
 
-      # metrics-server is not bundled with EKS (unlike AKS). The HPA needs it to
-      # read pod CPU, so install it as a cluster add-on before deploying.
+      # metrics-server is not bundled with EKS. The HPA needs it to read pod
+      # CPU, so install it as a cluster add-on before deploying.
       - name: Ensure metrics-server is installed
         run: |
           kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.8.1/components.yaml

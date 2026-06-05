@@ -7,9 +7,6 @@
 # - The role can push to the application ECR repository and describe the EKS
 #   cluster (kubectl access itself is granted by an EKS Access Entry in the
 #   root module, not by IAM).
-#
-# This is the AWS equivalent of the Azure GitHub Service Principal plus its
-# RBAC role assignment.
 # -----------------------------------------------------------------------------
 
 # Reuse the existing account-level OIDC provider, or create it once.

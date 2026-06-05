@@ -51,7 +51,7 @@ module "github_oidc" {
 }
 
 # -----------------------------------------------------------------------------
-# ACCESS ENTRIES (equivalent to the Azure RBAC role assignments)
+# ACCESS ENTRIES
 #
 # The GitHub Actions role needs cluster-admin to apply manifests, create
 # Secrets, install ingress-nginx, and run post-deploy smoke tests. On EKS this

@@ -4,9 +4,9 @@
 # Goal:
 # - Managed Kubernetes control plane with a private managed node group.
 # - VPC CNI with NetworkPolicy enforcement enabled so the application
-#   NetworkPolicy is actually honored (the AKS version used Cilium for this).
-# - Control plane logs shipped to CloudWatch (mirrors the Azure Log Analytics
-#   intent) with a short retention to keep demo cost low.
+#   NetworkPolicy is actually honored.
+# - Control plane logs shipped to CloudWatch with a short retention to keep
+#   demo cost low.
 # - Node IAM role carries ECR read-only so pods can pull images without IRSA.
 #
 # Built on the terraform-aws-modules/eks/aws module.

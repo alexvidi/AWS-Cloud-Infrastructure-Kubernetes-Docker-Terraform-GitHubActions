@@ -35,7 +35,7 @@ app = FastAPI(
     title="Market Quote API",
     description=(
         "Synthetic market quote API used to demonstrate cloud-native delivery, "
-        "security, and operations on Azure."
+        "security, and operations on AWS."
     ),
     version="1.1.0",
 )

@@ -19,6 +19,9 @@ locals {
 }
 
 module "vpc" {
+  # checkov:skip=CKV_TF_1: Pinned by version constraint from the official Terraform
+  # Registry module. Commit-hash pinning is impractical for Registry sources and
+  # version constraints are the standard, maintainable way to pin these modules.
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 5.0"
 

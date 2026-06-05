@@ -282,10 +282,6 @@ terraform destroy
 
 > Delete any load balancers created by `ingress-nginx` first (`kubectl delete -f .../ingress-nginx/.../cloud/deploy.yaml`) so Terraform can remove the VPC cleanly.
 
-## Cost Note
-
-The EKS control plane costs roughly $0.10/hour plus the node instances, and is **not** covered by the AWS free tier. This project is designed to be applied, demonstrated, and destroyed in the same session to keep cost negligible.
-
 ## Screenshots
 
 The images below document a full end-to-end AWS run of the project before the cloud resources were destroyed to control cost.

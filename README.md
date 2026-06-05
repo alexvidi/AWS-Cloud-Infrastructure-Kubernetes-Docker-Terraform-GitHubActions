@@ -286,6 +286,107 @@ terraform destroy
 
 The EKS control plane costs roughly $0.10/hour plus the node instances, and is **not** covered by the AWS free tier. This project is designed to be applied, demonstrated, and destroyed in the same session to keep cost negligible.
 
+## Screenshots
+
+The images below document a full end-to-end AWS run of the project before the cloud resources were destroyed to control cost.
+
+### Infrastructure
+
+![EKS cluster overview](docs/screenshots/cluster_EKS.png)
+The EKS cluster is `Active` on Kubernetes 1.31 with a healthy control plane and zero health issues.
+
+![Managed node group](docs/screenshots/clsuter_nodes.png)
+The managed node group runs 2× `t3.medium` on Amazon Linux 2023 with autoscaling configured between 2 and 4 nodes.
+
+![VPC resource map](docs/screenshots/resources_map.png)
+The VPC spans two Availability Zones with public and private subnets and a NAT gateway for private egress.
+
+![Ingress load balancer](docs/screenshots/load_balancer.png)
+The internet-facing ELB provisioned by `ingress-nginx` is the public entry point to the application.
+
+![All project resources](docs/screenshots/all_resources.png)
+Every resource Terraform created, grouped by the `Project=alexdevops99` tag in the Resource Groups Tag Editor.
+
+### Security & Identity (keyless CI/CD)
+
+![IAM OIDC identity providers](docs/screenshots/OIDC_providers.png)
+Two OpenID Connect providers: GitHub Actions (`token.actions.githubusercontent.com`) and the EKS cluster (for IRSA).
+
+![GitHub Actions role trust policy](docs/screenshots/rol_OIDC.png)
+The deploy role is assumed via `sts:AssumeRoleWithWebIdentity`, scoped by the `sub` claim to this repository only — no static keys.
+
+![GitHub Actions role permissions](docs/screenshots/rol2_OIDC.png)
+The role carries a single least-privilege inline policy (ECR push to the app repo + `eks:DescribeCluster`).
+
+### CI/CD
+
+![GitHub Actions workflows](docs/screenshots/workflows.png)
+The Validate and Deploy workflows in GitHub Actions.
+
+![Validate workflow](docs/screenshots/validate.png)
+Validation runs application checks, Terraform `fmt`/`validate`, Checkov IaC security, and Kubernetes manifest schema validation.
+
+![Deploy workflow](docs/screenshots/deploy.png)
+Deployment builds and Trivy-scans the image, pushes it to ECR, rolls it out to EKS, and runs a post-deploy smoke test.
+
+### Container Registry
+
+![ECR images](docs/screenshots/ECR_images.png)
+Images are tagged with the validated commit SHA (immutable tags, KMS-encrypted) and pulled by EKS.
+
+### Application
+
+![Swagger UI](docs/screenshots/1.app.png)
+The Swagger UI is reachable through the Kubernetes ingress.
+
+![Health endpoint](docs/screenshots/app_health.png)
+The `/health` endpoint used by Kubernetes probes and the post-deploy smoke test.
+
+![Quote endpoint](docs/screenshots/app_quote_btc.png)
+The `/quote` endpoint returning a synthetic market quote for a supported symbol.
+
+![Unsupported symbol](docs/screenshots/app_quote_error.png)
+An unsupported symbol returns a controlled `400` with the list of supported symbols.
+
+### Observability
+
+![Grafana dashboard](docs/screenshots/grafana_dashboard.png)
+The Market Quote API dashboard shows live request rate, p95 latency, and status-code metrics.
+
+![Prometheus targets](docs/screenshots/prometheus_scrap.png)
+Prometheus scrapes the application metrics endpoint successfully (target `UP`).
+
+![Prometheus request graph](docs/screenshots/prometheus_graph_requests.png)
+Request rate broken down by handler and status code in the Prometheus expression browser.
+
+![CloudWatch control plane logs](docs/screenshots/logs.png)
+The EKS control plane ships `api`, `audit`, and `authenticator` logs to CloudWatch.
+
+### Alerting
+
+![Prometheus alert firing](docs/screenshots/alert1-prometheus.png)
+Scaling the app to zero fires the `MarketQuoteApiDown` alerting rule (`FIRING`).
+
+![Alertmanager active alert](docs/screenshots/alerts_2.png)
+Alertmanager receives and groups the critical alert under its email receiver.
+
+### Kubernetes (kubectl)
+
+![kubectl get nodes](docs/screenshots/cluster_nodes.png)
+Two worker nodes `Ready` on EKS 1.31.
+
+![kubectl top nodes](docs/screenshots/top_nodes.png)
+Live node CPU/memory usage, served by `metrics-server`.
+
+![kubectl top pods](docs/screenshots/noed_marquet.png)
+Per-pod resource usage for the application workload.
+
+![App ingress, PDB and NetworkPolicy](docs/screenshots/ingress_pdb_networkpolice.png)
+The application Ingress, PodDisruptionBudget, and NetworkPolicy.
+
+![Monitoring namespace](docs/screenshots/monitoring.png)
+Prometheus, Grafana, and Alertmanager running in the `monitoring` namespace.
+
 ## Author
 
 **Alexandre Vidal**

@@ -11,6 +11,37 @@
 #   holds images (useful for short-lived demo environments).
 # -----------------------------------------------------------------------------
 
+data "aws_caller_identity" "current" {}
+
+# Customer-managed KMS key for ECR encryption at rest. Created explicitly (rather
+# than relying on the AWS-managed `aws/ecr` key) so Terraform guarantees the key
+# exists before the repository references it, and key rotation can be enabled.
+resource "aws_kms_key" "ecr" {
+  description             = "Encryption key for the ${var.repository_name} ECR repository"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  # Explicit key policy granting the account full administrative control (the
+  # standard default policy, declared explicitly). ECR uses grants under this.
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "EnableAccountAdmin"
+        Effect    = "Allow"
+        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
+        Action    = "kms:*"
+        Resource  = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_kms_alias" "ecr" {
+  name          = "alias/${var.repository_name}-ecr"
+  target_key_id = aws_kms_key.ecr.key_id
+}
+
 resource "aws_ecr_repository" "this" {
   name                 = var.repository_name
   image_tag_mutability = "IMMUTABLE"
@@ -20,10 +51,9 @@ resource "aws_ecr_repository" "this" {
     scan_on_push = true
   }
 
-  # KMS encryption with the AWS-managed `aws/ecr` key: stronger than AES256 and
-  # incurs no extra key cost (no customer-managed key created).
   encryption_configuration {
     encryption_type = "KMS"
+    kms_key         = aws_kms_key.ecr.arn
   }
 }
 

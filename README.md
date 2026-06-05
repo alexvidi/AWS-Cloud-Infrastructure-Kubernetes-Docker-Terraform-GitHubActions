@@ -292,99 +292,99 @@ The images below document a full end-to-end AWS run of the project before the cl
 
 ### Infrastructure
 
-![EKS cluster overview](docs/screenshots/cluster_EKS.png)
+![EKS cluster overview](docs/screenshots/infra-eks-cluster-overview.png)
 The EKS cluster is `Active` on Kubernetes 1.31 with a healthy control plane and zero health issues.
 
-![Managed node group](docs/screenshots/clsuter_nodes.png)
+![Managed node group](docs/screenshots/infra-eks-node-group.png)
 The managed node group runs 2× `t3.medium` on Amazon Linux 2023 with autoscaling configured between 2 and 4 nodes.
 
-![VPC resource map](docs/screenshots/resources_map.png)
+![VPC resource map](docs/screenshots/infra-vpc-resource-map.png)
 The VPC spans two Availability Zones with public and private subnets and a NAT gateway for private egress.
 
-![Ingress load balancer](docs/screenshots/load_balancer.png)
+![Ingress load balancer](docs/screenshots/infra-ingress-load-balancer.png)
 The internet-facing ELB provisioned by `ingress-nginx` is the public entry point to the application.
 
-![All project resources](docs/screenshots/all_resources.png)
+![All project resources](docs/screenshots/infra-all-resources-tag-editor.png)
 Every resource Terraform created, grouped by the `Project=alexdevops99` tag in the Resource Groups Tag Editor.
 
 ### Security & Identity (keyless CI/CD)
 
-![IAM OIDC identity providers](docs/screenshots/OIDC_providers.png)
+![IAM OIDC identity providers](docs/screenshots/iam-oidc-identity-providers.png)
 Two OpenID Connect providers: GitHub Actions (`token.actions.githubusercontent.com`) and the EKS cluster (for IRSA).
 
-![GitHub Actions role trust policy](docs/screenshots/rol_OIDC.png)
+![GitHub Actions role trust policy](docs/screenshots/iam-github-actions-role-trust.png)
 The deploy role is assumed via `sts:AssumeRoleWithWebIdentity`, scoped by the `sub` claim to this repository only — no static keys.
 
-![GitHub Actions role permissions](docs/screenshots/rol2_OIDC.png)
+![GitHub Actions role permissions](docs/screenshots/iam-github-actions-role-permissions.png)
 The role carries a single least-privilege inline policy (ECR push to the app repo + `eks:DescribeCluster`).
 
 ### CI/CD
 
-![GitHub Actions workflows](docs/screenshots/workflows.png)
+![GitHub Actions workflows](docs/screenshots/ci-actions-workflows.png)
 The Validate and Deploy workflows in GitHub Actions.
 
-![Validate workflow](docs/screenshots/validate.png)
+![Validate workflow](docs/screenshots/ci-validate-workflow.png)
 Validation runs application checks, Terraform `fmt`/`validate`, Checkov IaC security, and Kubernetes manifest schema validation.
 
-![Deploy workflow](docs/screenshots/deploy.png)
+![Deploy workflow](docs/screenshots/ci-deploy-workflow.png)
 Deployment builds and Trivy-scans the image, pushes it to ECR, rolls it out to EKS, and runs a post-deploy smoke test.
 
 ### Container Registry
 
-![ECR images](docs/screenshots/ECR_images.png)
+![ECR images](docs/screenshots/ecr-images.png)
 Images are tagged with the validated commit SHA (immutable tags, KMS-encrypted) and pulled by EKS.
 
 ### Application
 
-![Swagger UI](docs/screenshots/1.app.png)
+![Swagger UI](docs/screenshots/app-swagger-ui.png)
 The Swagger UI is reachable through the Kubernetes ingress.
 
-![Health endpoint](docs/screenshots/app_health.png)
+![Health endpoint](docs/screenshots/app-health.png)
 The `/health` endpoint used by Kubernetes probes and the post-deploy smoke test.
 
-![Quote endpoint](docs/screenshots/app_quote_btc.png)
+![Quote endpoint](docs/screenshots/app-quote-btc.png)
 The `/quote` endpoint returning a synthetic market quote for a supported symbol.
 
-![Unsupported symbol](docs/screenshots/app_quote_error.png)
+![Unsupported symbol](docs/screenshots/app-quote-unsupported-symbol.png)
 An unsupported symbol returns a controlled `400` with the list of supported symbols.
 
 ### Observability
 
-![Grafana dashboard](docs/screenshots/grafana_dashboard.png)
+![Grafana dashboard](docs/screenshots/obs-grafana-dashboard.png)
 The Market Quote API dashboard shows live request rate, p95 latency, and status-code metrics.
 
-![Prometheus targets](docs/screenshots/prometheus_scrap.png)
+![Prometheus targets](docs/screenshots/obs-prometheus-targets.png)
 Prometheus scrapes the application metrics endpoint successfully (target `UP`).
 
-![Prometheus request graph](docs/screenshots/prometheus_graph_requests.png)
+![Prometheus request graph](docs/screenshots/obs-prometheus-request-rate.png)
 Request rate broken down by handler and status code in the Prometheus expression browser.
 
-![CloudWatch control plane logs](docs/screenshots/logs.png)
+![CloudWatch control plane logs](docs/screenshots/obs-cloudwatch-control-plane-logs.png)
 The EKS control plane ships `api`, `audit`, and `authenticator` logs to CloudWatch.
 
 ### Alerting
 
-![Prometheus alert firing](docs/screenshots/alert1-prometheus.png)
+![Prometheus alert firing](docs/screenshots/alert-prometheus-firing.png)
 Scaling the app to zero fires the `MarketQuoteApiDown` alerting rule (`FIRING`).
 
-![Alertmanager active alert](docs/screenshots/alerts_2.png)
+![Alertmanager active alert](docs/screenshots/alert-alertmanager-active.png)
 Alertmanager receives and groups the critical alert under its email receiver.
 
 ### Kubernetes (kubectl)
 
-![kubectl get nodes](docs/screenshots/cluster_nodes.png)
+![kubectl get nodes](docs/screenshots/k8s-get-nodes.png)
 Two worker nodes `Ready` on EKS 1.31.
 
-![kubectl top nodes](docs/screenshots/top_nodes.png)
+![kubectl top nodes](docs/screenshots/k8s-top-nodes.png)
 Live node CPU/memory usage, served by `metrics-server`.
 
-![kubectl top pods](docs/screenshots/noed_marquet.png)
+![kubectl top pods](docs/screenshots/k8s-top-pods.png)
 Per-pod resource usage for the application workload.
 
-![App ingress, PDB and NetworkPolicy](docs/screenshots/ingress_pdb_networkpolice.png)
+![App ingress, PDB and NetworkPolicy](docs/screenshots/k8s-ingress-pdb-networkpolicy.png)
 The application Ingress, PodDisruptionBudget, and NetworkPolicy.
 
-![Monitoring namespace](docs/screenshots/monitoring.png)
+![Monitoring namespace](docs/screenshots/k8s-monitoring-resources.png)
 Prometheus, Grafana, and Alertmanager running in the `monitoring` namespace.
 
 ## Author

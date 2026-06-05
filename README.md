@@ -84,7 +84,7 @@ Deploy workflow
   The AWS VPC CNI add-on is configured with `enableNetworkPolicy = "true"` so the application `NetworkPolicy` is actually enforced. Without this, EKS would silently ignore NetworkPolicies.
 
 - **ingress-nginx instead of the AWS Load Balancer Controller (for now)**
-  The application is exposed through the `ingress-nginx` controller, which provisions an AWS load balancer for its Service. This avoids the extra IRSA + controller setup that the AWS Load Balancer Controller requires. Moving to the AWS Load Balancer Controller (ALB + IRSA) is a natural next iteration.
+  The application is exposed through the `ingress-nginx` controller, which provisions an AWS load balancer for its Service. This avoids the extra IRSA + controller setup that the AWS Load Balancer Controller (ALB + IRSA) would require; moving to it is a natural next iteration.
 
 - **Image pulls without IRSA**
   The managed node group's IAM role carries `AmazonEC2ContainerRegistryReadOnly`, so pods pull from ECR without per-pod IAM roles. IRSA is kept available (the cluster OIDC provider exists) for workloads that genuinely need scoped AWS access later.

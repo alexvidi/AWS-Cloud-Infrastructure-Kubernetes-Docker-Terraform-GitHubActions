@@ -5,18 +5,12 @@
 # - Provide an isolated network with public and private subnets across 2 AZs.
 # - Nodes run in private subnets; a single NAT gateway gives them outbound
 #   access for image pulls and the EKS control plane.
-# - Subnet tags let Kubernetes discover where to place external/internal load
-#   balancers (used by the ingress controller Service).
+# - Subnet tag lets Kubernetes discover where to place the external Load Balancer
+#   (used by the ingress-nginx controller).
 #
 # Built on the well-maintained terraform-aws-modules/vpc/aws module so the
 # network layer stays small and correct.
 # -----------------------------------------------------------------------------
-
-locals {
-  # /16 VPC split into /20 subnets: private in the first half, public offset by 8.
-  private_subnets = [for k in range(length(var.azs)) : cidrsubnet(var.vpc_cidr, 4, k)]
-  public_subnets  = [for k in range(length(var.azs)) : cidrsubnet(var.vpc_cidr, 4, k + 8)]
-}
 
 module "vpc" {
   # checkov:skip=CKV_TF_1: Pinned by version constraint from the official Terraform
@@ -25,22 +19,31 @@ module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 5.0"
 
+  # VPC name and IP range. All resources in the project will have IPs within 10.10.0.0/16.
   name = "${var.project_name}-vpc"
   cidr = var.vpc_cidr
 
-  azs             = var.azs
-  private_subnets = local.private_subnets
-  public_subnets  = local.public_subnets
+  # Two Availability Zones for high availability. If one datacenter fails, the other keeps running.
+  azs = var.azs
 
-  enable_nat_gateway   = true
-  single_nat_gateway   = true
+  # EKS nodes live in private subnets — no public IP, not reachable from the internet.
+  private_subnets = ["10.10.0.0/20", "10.10.16.0/20"]
+
+  # The Load Balancer (ingress-nginx) lives in public subnets — exposed to the internet to receive user traffic.
+  public_subnets = ["10.10.128.0/20", "10.10.144.0/20"]
+
+  # Required so EKS nodes in private subnets can reach the internet (e.g. pull images from ECR).
+  # Without this, nodes have no outbound internet access.
+  enable_nat_gateway = true
+
+  # Use a single NAT Gateway to reduce cost. In production, use one per AZ for full high availability.
+  single_nat_gateway = true
+
+  # Required by EKS. Without this, nodes cannot resolve DNS names inside the VPC.
   enable_dns_hostnames = true
 
-  # Tags consumed by the in-tree AWS cloud provider to place load balancers.
+  # Tag consumed by the Kubernetes cloud controller to know which subnet to place the external Load Balancer in.
   public_subnet_tags = {
     "kubernetes.io/role/elb" = "1"
-  }
-  private_subnet_tags = {
-    "kubernetes.io/role/internal-elb" = "1"
   }
 }

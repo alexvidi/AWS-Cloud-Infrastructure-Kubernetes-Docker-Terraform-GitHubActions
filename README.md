@@ -11,6 +11,8 @@ The application is intentionally simple; the focus of this repository is the pla
 
 > **Project status:** the AWS environment is provisioned and destroyed per validated run to control cost (the EKS control plane bills hourly and has no free tier). The complete end-to-end run is documented in [Proof of Run](#proof-of-run) and the [Full Run Gallery](#full-run-gallery).
 
+> **Multi-cloud sibling:** the same platform implemented on Azure — AKS, ACR, managed identities, and Azure RBAC — lives in [Azure-Cloud-Infrastructure-Kubernetes-Docker-Terraform-GitHubActions](https://github.com/alexvidi/Azure-Cloud-Infrastructure-Kubernetes-Docker-Terraform-GitHubActions).
+
 ![Project flow overview](docs/project-flow-overview.svg)
 
 ## At a Glance

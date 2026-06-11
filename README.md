@@ -135,7 +135,7 @@ Terraform lives under [infra/](infra).
 Main modules:
 
 - `network` — a VPC with public and private subnets across two AZs and a single NAT gateway (wraps `terraform-aws-modules/vpc/aws`).
-- `registry` — an ECR repository with scan-on-push and a lifecycle policy.
+- `registry` — an ECR repository with immutable tags, scan-on-push, and KMS encryption.
 - `eks` — an EKS cluster with a private managed node group, VPC CNI NetworkPolicy enforcement, and control plane logs to CloudWatch (wraps `terraform-aws-modules/eks/aws`).
 - `github-oidc` — the GitHub OIDC provider and a least-privilege IAM role for CI/CD.
 

@@ -55,7 +55,7 @@ module "github_oidc" {
 #
 # The GitHub Actions role needs cluster-admin to apply manifests, create
 # Secrets, install ingress-nginx, and run post-deploy smoke tests. On EKS this
-# is done with native Access Entries instead of the legacy aws-auth ConfigMap.
+# is done with native Access Entries.
 #
 # Image pulls do not need a role assignment here: the managed node group's IAM
 # role carries AmazonEC2ContainerRegistryReadOnly (configured in the eks module).

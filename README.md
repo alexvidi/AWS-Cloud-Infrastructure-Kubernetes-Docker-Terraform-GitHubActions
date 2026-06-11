@@ -59,23 +59,26 @@ The application is intentionally simple; the focus of this repository is the pla
 flowchart LR
     client(("Client")) --> elb["AWS ELB"]
     elb --> ctrl["ingress-nginx"]
-    ctrl --> svc["ClusterIP Service"]
-    svc --> pod["FastAPI Pods ×2<br/>(HPA scales 2–5)"]
+    ctrl --> svc["ClusterIP<br/>Service"]
+    svc --> pod["FastAPI Pods x2<br/>HPA scales 2-5"]
 ```
 
 ### Delivery Flow
 
 ```mermaid
 flowchart TD
-    A["Push to master"] --> B["Validate workflow<br/>ruff · pytest · bandit · pip-audit<br/>terraform fmt + validate · checkov · kubeconform"]
-    B -->|"success"| C{"Runtime files or<br/>k8s manifests changed?"}
+    A["Push to master"] --> B["Validate workflow:<br/>ruff, pytest, bandit,<br/>pip-audit, terraform fmt,<br/>validate, checkov,<br/>kubeconform"]
+    B -->|"success"| C{"Runtime files or<br/>k8s manifests<br/>changed?"}
     C -->|"no"| S["Skip deploy"]
-    C -->|"yes"| D["Assume AWS role via OIDC"]
-    D --> E["Docker build"] --> F["Trivy scan<br/>(fails on HIGH / CRITICAL)"]
-    F --> G["Push to ECR — tag = commit SHA"]
-    G --> H["Ensure ingress-nginx + metrics-server"]
-    H --> I["kubectl apply k8s/"] --> J["Set Deployment image to SHA"]
-    J --> K["Wait for rollout"] --> L["Smoke test /health + /quote"]
+    C -->|"yes"| D["Assume AWS role<br/>via OIDC"]
+    D --> E["Docker build"]
+    E --> F["Trivy scan, fails on<br/>HIGH / CRITICAL"]
+    F --> G["Push to ECR<br/>tag = commit SHA"]
+    G --> H["Ensure ingress-nginx<br/>and metrics-server"]
+    H --> I["kubectl apply k8s/"]
+    I --> J["Set Deployment image<br/>to commit SHA"]
+    J --> K["Wait for rollout"]
+    K --> L["Smoke test<br/>/health and /quote"]
 ```
 
 ### Network Topology
@@ -83,21 +86,23 @@ flowchart TD
 ```mermaid
 flowchart TB
     inet(("Internet")) --> elb
-    subgraph vpc["VPC 10.10.0.0/16 — two AZs, us-east-1"]
-        subgraph pub["Public subnets · 10.10.128.0/20 · 10.10.144.0/20"]
-            elb["ELB (ingress-nginx)"]
-            nat["NAT Gateway (single)"]
+    subgraph vpc["VPC 10.10.0.0/16"]
+        subgraph pub["Public subnets"]
+            elb["ELB<br/>ingress-nginx"]
+            nat["NAT Gateway<br/>single"]
         end
-        subgraph priv["Private subnets · 10.10.0.0/20 · 10.10.16.0/20"]
-            nodes["EKS managed node group<br/>2–4 × t3.medium"]
+        subgraph priv["Private subnets"]
+            nodes["EKS managed<br/>node group<br/>2-4 x t3.medium"]
         end
         elb --> nodes
         nodes --> nat
     end
-    nodes <--> cp["EKS control plane (AWS-managed)"]
-    nat --> ecr["ECR — KMS-encrypted, immutable tags"]
-    cp --> cw["CloudWatch Logs<br/>api · audit · authenticator"]
+    nodes <--> cp["EKS control plane<br/>AWS-managed"]
+    nat --> ecr["ECR<br/>KMS, immutable tags"]
+    cp --> cw["CloudWatch Logs<br/>api, audit,<br/>authenticator"]
 ```
+
+The VPC spans two AZs in `us-east-1`: public subnets `10.10.128.0/20` and `10.10.144.0/20`, private subnets `10.10.0.0/20` and `10.10.16.0/20`.
 
 ## Key Technical Decisions
 

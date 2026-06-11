@@ -1,24 +1,17 @@
 # FastAPI on AWS with Terraform, EKS, and GitHub Actions
 
+[![Validate](https://github.com/alexvidi/AWS-Cloud-Infrastructure-Kubernetes-Docker-Terraform-GitHubActions/actions/workflows/validate.yml/badge.svg?branch=master)](https://github.com/alexvidi/AWS-Cloud-Infrastructure-Kubernetes-Docker-Terraform-GitHubActions/actions/workflows/validate.yml)
 [![Terraform](https://img.shields.io/badge/IaC-Terraform-623CE4?logo=terraform)](https://www.terraform.io/)
 [![AWS](https://img.shields.io/badge/Cloud-AWS-FF9900?logo=amazonaws&logoColor=white)](https://aws.amazon.com/)
 [![Kubernetes](https://img.shields.io/badge/Orchestration-Kubernetes-326CE5?logo=kubernetes)](https://kubernetes.io/)
-[![FastAPI](https://img.shields.io/badge/Framework-FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
 
-## Overview
+**A production-style delivery platform for a small FastAPI service: Terraform-provisioned AWS infrastructure, keyless OIDC CI/CD, hardened Kubernetes on EKS, and Prometheus/Alertmanager/Grafana observability — deployed end-to-end and fully documented below.**
 
-This repository contains a cloud-native deployment project that takes a small FastAPI market quote service from source code to a production-style runtime on AWS.
+The application is intentionally simple; the focus of this repository is the platform around it. Features that were not justified by the current workload were deliberately left out so the repository reflects the technologies that are actually being used.
 
-The application itself is intentionally simple. The focus of the repository is the delivery platform around it:
+> **Project status:** the AWS environment is provisioned and destroyed per validated run to control cost (the EKS control plane bills hourly and has no free tier). The complete end-to-end run is documented in [Proof of Run](#proof-of-run) and the [Full Run Gallery](#full-run-gallery).
 
-- AWS infrastructure provisioned with Terraform
-- Docker image build and publish to Amazon Elastic Container Registry (ECR)
-- application runtime on Amazon Elastic Kubernetes Service (EKS)
-- Kubernetes deployment with Ingress, autoscaling, network restrictions, and disruption controls
-- CI/CD validation and deployment with GitHub Actions over OIDC (no static AWS keys)
-- Prometheus metrics, Alertmanager email alerts, and Grafana dashboards
-
-The project is deliberately scoped to stay coherent. Features that were not justified by the current workload were left out so the repository reflects the technologies that are actually being used.
+![Project flow overview](docs/project-flow-overview.svg)
 
 ## At a Glance
 
@@ -33,43 +26,77 @@ The project is deliberately scoped to stay coherent. Features that were not just
 | Security | Pod Security Admission, container hardening, VPC CNI NetworkPolicy enforcement, IAM least privilege, Trivy, Checkov |
 | Observability | Prometheus + Alertmanager + Grafana via raw Kubernetes manifests |
 
+## Proof of Run
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/ci-deploy-workflow.png" alt="Deploy workflow" width="100%"/><br/>
+      <sub><b>CI/CD:</b> build → Trivy scan → ECR push → EKS rollout → smoke test, all green.</sub>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/infra-eks-cluster-overview.png" alt="EKS cluster overview" width="100%"/><br/>
+      <sub><b>EKS:</b> cluster <code>Active</code> on Kubernetes 1.31, healthy control plane, zero health issues.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/obs-grafana-dashboard.png" alt="Grafana dashboard" width="100%"/><br/>
+      <sub><b>Observability:</b> live request rate, p95 latency, and status-code metrics in Grafana.</sub>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/app-quote-btc.png" alt="Quote endpoint" width="100%"/><br/>
+      <sub><b>Application:</b> <code>/quote</code> served through the Kubernetes ingress and AWS load balancer.</sub>
+    </td>
+  </tr>
+</table>
+
 ## Architecture
-
-### High-Level Architecture
-
-![Project flow overview](docs/project-flow-overview.svg)
 
 ### Runtime Request Flow
 
-```text
-Client
-  -> ingress-nginx LoadBalancer (AWS ELB)
-  -> Ingress
-  -> ClusterIP Service
-  -> FastAPI Pod
-  -> /health or /quote response
+```mermaid
+flowchart LR
+    client(("Client")) --> elb["AWS ELB"]
+    elb --> ctrl["ingress-nginx"]
+    ctrl --> svc["ClusterIP Service"]
+    svc --> pod["FastAPI Pods ×2<br/>(HPA scales 2–5)"]
 ```
 
 ### Delivery Flow
 
-```text
-Push to master
-  -> GitHub Actions Validate workflow
-  -> GitHub Actions Deploy workflow when Validate succeeds and the commit
-     changes application runtime files or Kubernetes manifests
+```mermaid
+flowchart TD
+    A["Push to master"] --> B["Validate workflow<br/>ruff · pytest · bandit · pip-audit<br/>terraform fmt + validate · checkov · kubeconform"]
+    B -->|"success"| C{"Runtime files or<br/>k8s manifests changed?"}
+    C -->|"no"| S["Skip deploy"]
+    C -->|"yes"| D["Assume AWS role via OIDC"]
+    D --> E["Docker build"] --> F["Trivy scan<br/>(fails on HIGH / CRITICAL)"]
+    F --> G["Push to ECR — tag = commit SHA"]
+    G --> H["Ensure ingress-nginx + metrics-server"]
+    H --> I["kubectl apply k8s/"] --> J["Set Deployment image to SHA"]
+    J --> K["Wait for rollout"] --> L["Smoke test /health + /quote"]
+```
 
-Deploy workflow
-  -> Detect deploy-relevant changes
-  -> Assume AWS role via OIDC
-  -> Docker build
-  -> Trivy image scan
-  -> Push image to ECR
-  -> Ensure ingress-nginx controller exists
-  -> Ensure metrics-server exists
-  -> kubectl apply manifests to EKS
-  -> Update Deployment image to commit SHA
-  -> Wait for rollout completion
-  -> Smoke test /health and /quote
+### Network Topology
+
+```mermaid
+flowchart TB
+    inet(("Internet")) --> elb
+    subgraph vpc["VPC 10.10.0.0/16 — two AZs, us-east-1"]
+        subgraph pub["Public subnets · 10.10.128.0/20 · 10.10.144.0/20"]
+            elb["ELB (ingress-nginx)"]
+            nat["NAT Gateway (single)"]
+        end
+        subgraph priv["Private subnets · 10.10.0.0/20 · 10.10.16.0/20"]
+            nodes["EKS managed node group<br/>2–4 × t3.medium"]
+        end
+        elb --> nodes
+        nodes --> nat
+    end
+    nodes <--> cp["EKS control plane (AWS-managed)"]
+    nat --> ecr["ECR — KMS-encrypted, immutable tags"]
+    cp --> cw["CloudWatch Logs<br/>api · audit · authenticator"]
 ```
 
 ## Key Technical Decisions
@@ -281,11 +308,23 @@ terraform destroy
 
 > Delete the `ingress-nginx` Service first (`kubectl delete svc ingress-nginx-controller -n ingress-nginx`) so its AWS load balancer is removed and Terraform can delete the VPC cleanly.
 
-## Screenshots
+## Limitations & Next Steps
 
-The images below document a full end-to-end AWS run of the project before the cloud resources were destroyed to control cost.
+Deliberate scope cuts for a coherent demo, and what the next iteration would add:
 
-### Infrastructure
+- **TLS and DNS** — the Ingress omits host and TLS so the demo works directly through the load balancer hostname. Next: a real domain, `cert-manager` with Let's Encrypt, and host-based routing.
+- **AWS Load Balancer Controller** — `ingress-nginx` provisions a classic ELB today. Next: native ALB integration via the AWS Load Balancer Controller with IRSA.
+- **Single NAT gateway** — a cost optimization for a demo environment; production would run one NAT gateway per AZ for full high availability.
+- **Push-based deploys** — CI applies manifests with `kubectl`. Next: pull-based GitOps reconciliation with Argo CD or Flux.
+- **Monitoring durability** — Prometheus stores data in an `emptyDir` with 6h retention and there is no `kube-state-metrics`. Production would add persistent storage and richer cluster-level metrics.
+- **Raw manifests** — transparent for review, but Helm or Kustomize overlays would be the natural step for multi-environment deploys.
+
+## Full Run Gallery
+
+Every screenshot below documents a single end-to-end AWS run of the project before the cloud resources were destroyed to control cost.
+
+<details>
+<summary><b>Infrastructure — EKS, node group, VPC, load balancer</b></summary>
 
 ![EKS cluster overview](docs/screenshots/infra-eks-cluster-overview.png)
 The EKS cluster is `Active` on Kubernetes 1.31 with a healthy control plane and zero health issues.
@@ -299,7 +338,10 @@ The VPC spans two Availability Zones with public and private subnets and a NAT g
 ![Ingress load balancer](docs/screenshots/infra-ingress-load-balancer.png)
 The internet-facing ELB provisioned by `ingress-nginx` is the public entry point to the application.
 
-### Security & Identity (keyless CI/CD)
+</details>
+
+<details>
+<summary><b>Security &amp; Identity — keyless CI/CD with OIDC</b></summary>
 
 ![IAM OIDC identity providers](docs/screenshots/iam-oidc-identity-providers.png)
 Two OpenID Connect providers: GitHub Actions (`token.actions.githubusercontent.com`) and the EKS cluster (for IRSA).
@@ -310,7 +352,10 @@ The deploy role is assumed via `sts:AssumeRoleWithWebIdentity`, scoped by the `s
 ![GitHub Actions role permissions](docs/screenshots/iam-github-actions-role-permissions.png)
 The role carries a single least-privilege inline policy (ECR push to the app repo + `eks:DescribeCluster`).
 
-### CI/CD
+</details>
+
+<details>
+<summary><b>CI/CD — Validate and Deploy workflows</b></summary>
 
 ![GitHub Actions workflows](docs/screenshots/ci-actions-workflows.png)
 The Validate and Deploy workflows in GitHub Actions.
@@ -321,12 +366,18 @@ Validation runs application checks, Terraform `fmt`/`validate`, Checkov IaC secu
 ![Deploy workflow](docs/screenshots/ci-deploy-workflow.png)
 Deployment builds and Trivy-scans the image, pushes it to ECR, rolls it out to EKS, and runs a post-deploy smoke test.
 
-### Container Registry
+</details>
+
+<details>
+<summary><b>Container Registry — ECR</b></summary>
 
 ![ECR images](docs/screenshots/ecr-images.png)
 Images are tagged with the validated commit SHA (immutable tags, KMS-encrypted) and pulled by EKS.
 
-### Application
+</details>
+
+<details>
+<summary><b>Application — served through the ingress</b></summary>
 
 ![Swagger UI](docs/screenshots/app-swagger-ui.png)
 The Swagger UI is reachable through the Kubernetes ingress.
@@ -340,7 +391,10 @@ The `/quote` endpoint returning a synthetic market quote for a supported symbol.
 ![Unsupported symbol](docs/screenshots/app-quote-unsupported-symbol.png)
 An unsupported symbol returns a controlled `400` with the list of supported symbols.
 
-### Observability
+</details>
+
+<details>
+<summary><b>Observability — Grafana, Prometheus, CloudWatch</b></summary>
 
 ![Grafana dashboard](docs/screenshots/obs-grafana-dashboard.png)
 The Market Quote API dashboard shows live request rate, p95 latency, and status-code metrics.
@@ -354,7 +408,10 @@ Request rate broken down by handler and status code in the Prometheus expression
 ![CloudWatch control plane logs](docs/screenshots/obs-cloudwatch-control-plane-logs.png)
 The EKS control plane ships `api`, `audit`, and `authenticator` logs to CloudWatch.
 
-### Alerting
+</details>
+
+<details>
+<summary><b>Alerting — Prometheus rules and Alertmanager</b></summary>
 
 ![Prometheus alert firing](docs/screenshots/alert-prometheus-firing.png)
 Scaling the app to zero fires the `MarketQuoteApiDown` alerting rule (`FIRING`).
@@ -362,7 +419,10 @@ Scaling the app to zero fires the `MarketQuoteApiDown` alerting rule (`FIRING`).
 ![Alertmanager active alert](docs/screenshots/alert-alertmanager-active.png)
 Alertmanager receives and groups the critical alert under its email receiver.
 
-### Kubernetes (kubectl)
+</details>
+
+<details>
+<summary><b>Kubernetes — kubectl views of the running cluster</b></summary>
 
 ![kubectl get nodes](docs/screenshots/k8s-get-nodes.png)
 Two worker nodes `Ready` on EKS 1.31.
@@ -381,6 +441,8 @@ The application Ingress, PodDisruptionBudget, and NetworkPolicy.
 
 ![Monitoring namespace](docs/screenshots/k8s-monitoring-resources.png)
 Prometheus, Grafana, and Alertmanager running in the `monitoring` namespace.
+
+</details>
 
 ## Author
 
